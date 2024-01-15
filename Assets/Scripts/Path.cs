@@ -803,6 +803,11 @@ public class Path
         return new Vector3[] { points[i * 3], points[i * 3 + 1], points[i * 3 + 2], points[LoopIndex(i * 3 + 3)] };
     }
 
+    public Vector3 GetPoint(int i)
+    {
+        return points[i];
+    }
+
     public int SegmentIndexFromAnchor(int anchorIndex)
     {
         return LoopIndex(anchorIndex) / 3;

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -23,6 +24,8 @@ public class RoadCreator : MonoBehaviour
 
     int numberOfVerts = 7;
     int numberOfTriangles = 14;
+
+    const int numberOfVertsInSegment = 7;
 
     public void UpdateRoad()
     {
@@ -131,17 +134,18 @@ public class RoadCreator : MonoBehaviour
                     int index = triIndex + indexOffset + j;
 
                     tris[index] = vertIndex + j;
-                    tris[index + 1] = (vertIndex + j + 7) % verts.Length;
+                    tris[index + 1] = (vertIndex + j + numberOfVertsInSegment) % verts.Length;
                     tris[index + 2] = vertIndex + j + 1;
 
                     tris[index + 3] = vertIndex + j + 1;
-                    tris[index + 4] = (vertIndex + j + 7) % verts.Length;
-                    tris[index + 5] = (vertIndex + j + 8) % verts.Length;
+                    tris[index + 4] = (vertIndex + j + numberOfVertsInSegment) % verts.Length;
+                    tris[index + 5] = (vertIndex + j + numberOfVertsInSegment + 1) % verts.Length;
 
                     indexOffset += 5;
                 }
 
                 //RIGHT SIDE
+                GenerateTriangle(verts, tris, triIndex, vertIndex, 4, 24);
                 tris[triIndex + 24] = vertIndex + 4;
                 tris[triIndex + 25] = (vertIndex + 12) % verts.Length;
                 tris[triIndex + 26] = vertIndex + 5;
@@ -179,5 +183,17 @@ public class RoadCreator : MonoBehaviour
         mesh.uv = uvs;
 
         return mesh;
+    }
+
+    void GenerateTriangle(Vector3[] verts, int[] tris, int triIndex, int vertIndex, int indexOffset, int triIndexOffset)
+    {
+        //int index 
+        tris[triIndex + triIndexOffset] = vertIndex + indexOffset;
+        tris[triIndex + triIndexOffset + 1] = (vertIndex + indexOffset + numberOfVertsInSegment + 1) % verts.Length;
+        tris[triIndex + triIndexOffset + 2] = vertIndex + indexOffset + 1;
+
+        tris[triIndex + triIndexOffset + 3] = vertIndex + indexOffset;
+        tris[triIndex + triIndexOffset + 4] = (vertIndex + indexOffset + numberOfVertsInSegment) % verts.Length;
+        tris[triIndex + triIndexOffset + 5] = (vertIndex + indexOffset + numberOfVertsInSegment + 1) % verts.Length;
     }
 }

@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,7 +14,7 @@ public class PathEditor : Editor
         get { return creator.path; }
     }
 
-    const float segmentSelectDistanceThreshold = 1f;
+    const float segmentSelectDistanceThreshold = 5f;
     const float minDistanceToAnchorThreshold = 1f; 
 
     int currentSelectedSegmentIndex = -1; 
@@ -93,7 +95,14 @@ public class PathEditor : Editor
         Vector2 mousePosition2D = mousePosition;
 
         Ray ray = HandleUtility.GUIPointToWorldRay(guiEvent.mousePosition);
-        RaycastHit hitInfo;
+
+        int nearestControl = HandleUtility.nearestControl;
+        bool isAnchor = (nearestControl - 1) % 3 == 0;
+
+        if (nearestControl > 0 && nearestControl <= creator.path.NumberOfPoints)
+        {
+            closestAnchorIndex = HandleUtility.nearestControl - 1;
+        }
 
         Undo.RecordObject(creator, "offset Points");
         
@@ -104,14 +113,24 @@ public class PathEditor : Editor
         creator.path.offsetRotation = creator.transform.rotation;
         creator.path.offsetScale = creator.transform.localScale;
 
-        if (Physics.Raycast(ray, out hitInfo, Mathf.Infinity))
+        if (creator.path.SelectedAxis == 0)
         {
-            mousePosition = hitInfo.point;
-        }
+            Vector3 lastPointInSegment = Path.GetPoint(Path.NumberOfPoints - 1);
+            Vector3 desiredPos = Vector3.zero;
+            float minDistanceToSegement = 10000;
 
-        if (creator.path.SelectedAxis == 3)
-        {
-            mousePosition = origin + direction * 50f;
+            for (int distanceAlongRay = 0; distanceAlongRay < creator.mouseDistanceSampleSize; distanceAlongRay++)
+            {
+                Vector3 pointOnMouseRay = ray.GetPoint(distanceAlongRay * creator.mouseDistanceMuliplier);
+                float distance = Vector3.Distance(lastPointInSegment, pointOnMouseRay);
+
+                if (distance < minDistanceToSegement)
+                {
+                    minDistanceToSegement = distance;
+                    desiredPos = pointOnMouseRay;
+                }
+            }
+            mousePosition = desiredPos;
         }
 
         if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0 && guiEvent.shift)
@@ -128,16 +147,17 @@ public class PathEditor : Editor
             }
         }
 
+        if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0)
+        {
+            if (closestAnchorIndex != -1)
+            {
+                Undo.RecordObject(creator, "Select Point");
+                selectedAnchorIndex = closestAnchorIndex;
+            }
+        }
+
         if (Event.current.control)
         {
-            int nearestControl = HandleUtility.nearestControl;
-            bool isAnchor = (nearestControl - 1) % 3 == 0;
-
-            if (Event.current.type == EventType.MouseDown && nearestControl > 0 && nearestControl <= creator.path.NumberOfPoints)
-            {
-                closestAnchorIndex = HandleUtility.nearestControl - 1;
-            }
-
             if (isAnchor)
             {
                 if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0)
@@ -149,25 +169,16 @@ public class PathEditor : Editor
                     }
                 }
             }
-
-            if (guiEvent.type == EventType.MouseDown && guiEvent.button == 1)
-            {
-                if (closestAnchorIndex != -1)
-                {
-                    Undo.RecordObject(creator, "Select Point");
-                    selectedAnchorIndex = closestAnchorIndex;
-                }
-            }
-
-            if (guiEvent.type == EventType.MouseDown && guiEvent.button == 1 && HandleUtility.nearestControl == 0)
-            {
-                closestAnchorIndex = -1;
-                selectedAnchorIndex = -1;
-            }
         }
         else
         {
             closestAnchorIndex = -1;
+        }
+
+        if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0 && HandleUtility.nearestControl == 0)
+        {
+            closestAnchorIndex = -1;
+            selectedAnchorIndex = -1;
         }
 
         if (guiEvent.type == EventType.MouseMove && Event.current.shift)
@@ -246,7 +257,7 @@ public class PathEditor : Editor
                 }
 
                 float diameter = (i % 3 == 0) ? creator.anchorDiameter: creator.controlDiameter;
-                var fmh_249_71_638284833412831475 = Quaternion.identity; Vector3 newPos = Handles.FreeMoveHandle(i+1, Path[i], diameter, Vector2.zero, Handles.SphereHandleCap);
+                Vector3 newPos = Handles.FreeMoveHandle(i+1, Path[i], diameter, Vector2.zero, Handles.SphereHandleCap);
                
                 if (selectedAnchorIndex == i)
                 {
